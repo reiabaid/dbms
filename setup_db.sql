@@ -352,3 +352,38 @@ BEGIN
     GROUP BY d.dlc_type
     ORDER BY dlc_count DESC;
 END;
+
+-- PROCEDURE 5: RegisterGameComplete (Atomic Transaction)
+DROP PROCEDURE IF EXISTS RegisterGameComplete;
+CREATE PROCEDURE RegisterGameComplete(
+    IN p_title VARCHAR(150),
+    IN p_developer_id INT,
+    IN p_publisher_id INT,
+    IN p_genre_id INT,
+    IN p_platform_id INT,
+    IN p_price DECIMAL(6,2)
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION 
+    BEGIN
+        ROLLBACK;
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Transaction Failed: Game Registration Aborted.';
+    END;
+
+    START TRANSACTION;
+
+    INSERT INTO Game (title, developer_id, publisher_id, base_price_usd)
+    VALUES (p_title, p_developer_id, p_publisher_id, p_price);
+    
+    SET @new_game_id = LAST_INSERT_ID();
+
+    INSERT INTO GameGenre (game_id, genre_id, is_primary)
+    VALUES (@new_game_id, p_genre_id, TRUE);
+
+    INSERT INTO GamePlatformListing (game_id, platform_id, price_usd)
+    VALUES (@new_game_id, p_platform_id, p_price);
+
+    COMMIT;
+    
+    SELECT @new_game_id AS registered_game_id, 'SUCCESS' AS status;
+END;
