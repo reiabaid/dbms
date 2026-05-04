@@ -82,6 +82,11 @@ CREATE TABLE IF NOT EXISTS Game (
     FOREIGN KEY (engine_id) REFERENCES GameEngine(engine_id)
 );
 
+-- INDEXING (Rubric Enhancement)
+CREATE INDEX idx_game_title ON Game(title);
+CREATE INDEX idx_release_date ON Game(release_date);
+CREATE INDEX idx_metacritic ON Game(metacritic_score);
+
 -- TABLE 7: GameGenre
 CREATE TABLE IF NOT EXISTS GameGenre (
     game_id INT,
@@ -386,4 +391,18 @@ BEGIN
     COMMIT;
     
     SELECT @new_game_id AS registered_game_id, 'SUCCESS' AS status;
+END;
+
+-- SCALAR FUNCTION: CalculateROI (Rubric Enhancement)
+DROP FUNCTION IF EXISTS CalculateROI;
+CREATE FUNCTION CalculateROI(p_revenue BIGINT, p_budget BIGINT) 
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE v_roi DECIMAL(10,2);
+    IF p_budget IS NULL OR p_budget = 0 THEN
+        RETURN 0.00;
+    END IF;
+    SET v_roi = ((p_revenue - p_budget) / p_budget) * 100;
+    RETURN v_roi;
 END;
