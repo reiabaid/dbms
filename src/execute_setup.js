@@ -3,7 +3,7 @@ const path = require('path');
 const db = require('./db');
 
 async function runSetup() {
-  const sqlPath = path.join(__dirname, 'setup_db.sql');
+  const sqlPath = path.join(__dirname, '..', 'sql', 'setup_db.sql');
   const sql = fs.readFileSync(sqlPath, 'utf8');
 
   console.log('--- Starting Database Setup ---');

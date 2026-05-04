@@ -10,20 +10,38 @@ The credentials are stored in the `.env` file (not to be committed to version co
 - **User**: `avnadmin`
 - **Database**: `defaultdb`
 
-## Files
-- `.env`: Stores environment variables.
-- `db.js`: Exports a MySQL connection pool using `mysql2/promise`.
-- `test-connection.js`: A script to verify the connection.
-
-## Usage
-To test the connection, run:
-```bash
-node test-connection.js
+## Project Structure
+```text
+dbms/
+├── docs/                # Project documentation & Viva prep
+├── sql/                 # Schema setup and seed data
+├── src/                 # Connection logic and automation scripts
+├── .env                 # Database credentials
+└── package.json         # Scripts and dependencies
 ```
 
+## Setup & Usage
+1. **Initialize Project**:
+   ```bash
+   npm install
+   ```
+2. **Setup Database**:
+   ```bash
+   npm run setup
+   ```
+3. **Verify Connection**:
+   ```bash
+   npm run test
+   ```
+4. **Seed Sample Data**:
+   ```bash
+   npm run seed
+   ```
+
+## Database Utility
 To use the database in your code:
 ```javascript
-const db = require('./db');
+const db = require('./src/db');
 
 async function getData() {
   const [rows] = await db.execute('SELECT * FROM your_table');

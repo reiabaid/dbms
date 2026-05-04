@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "setup": "node src/execute_setup.js",
+    "test": "node src/test-connection.js",
+    "seed": "node -e \"const fs = require('fs'); const db = require('./src/db'); async function seed() { const sql = fs.readFileSync('sql/seed_data.sql', 'utf8'); await db.query(sql); console.log('✅ Seed data inserted!'); await db.end(); } seed();\""
   },
   "keywords": [],
   "author": "",
