@@ -1,4 +1,4 @@
-const db = require('./src/db');
+const db = require('../src/db');
 
 // Known engine mappings for top Steam titles
 const ENGINE_MAP = {

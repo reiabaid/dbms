@@ -69,10 +69,10 @@ app.get('/api/classify/:id', async (req, res) => {
 });
 
 app.post('/api/register', async (req, res) => {
-    const { title, developer_id, publisher_id, genre_id, platform_id, price } = req.body;
+    const { title, developer_name, publisher_id, genre_id, platform_id, price } = req.body;
     try {
         const [rows] = await pool.query('CALL RegisterGameComplete(?, ?, ?, ?, ?, ?)', 
-            [title, developer_id, publisher_id, genre_id, platform_id, price]);
+            [title, developer_name, publisher_id, genre_id, platform_id, price]);
         res.json(rows[0][0]);
     } catch (err) {
         res.status(500).json({ error: err.message });

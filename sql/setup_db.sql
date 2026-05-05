@@ -1,8 +1,8 @@
--- Nexus Game Intelligence System Setup
+-- Obsyria Game Intelligence System Setup
 
 -- PART 1: DDL
-CREATE DATABASE IF NOT EXISTS nexusdb;
-USE nexusdb;
+CREATE DATABASE IF NOT EXISTS obsyria;
+USE obsyria;
 
 -- TABLE 1: Developer
 CREATE TABLE IF NOT EXISTS Developer (
@@ -273,6 +273,20 @@ WHERE g.metacritic_score > (
 )
 ORDER BY g.metacritic_score DESC;
 
+-- SCALAR FUNCTION: CalculateROI (Rubric Enhancement)
+DROP FUNCTION IF EXISTS CalculateROI;
+CREATE FUNCTION CalculateROI(p_revenue BIGINT, p_budget BIGINT) 
+RETURNS DECIMAL(10,2)
+DETERMINISTIC
+BEGIN
+    DECLARE v_roi DECIMAL(10,2);
+    IF p_budget IS NULL OR p_budget = 0 THEN
+        RETURN 0.00;
+    END IF;
+    SET v_roi = ((p_revenue - p_budget) / p_budget) * 100;
+    RETURN v_roi;
+END;
+
 -- RUBRIC: CalculateROI scalar function wired into a view
 CREATE OR REPLACE VIEW GameROI AS
 SELECT
@@ -429,23 +443,32 @@ END;
 DROP PROCEDURE IF EXISTS RegisterGameComplete;
 CREATE PROCEDURE RegisterGameComplete(
     IN p_title VARCHAR(150),
-    IN p_developer_id INT,
+    IN p_developer_name VARCHAR(100),
     IN p_publisher_id INT,
     IN p_genre_id INT,
     IN p_platform_id INT,
     IN p_price DECIMAL(6,2)
 )
 BEGIN
+    DECLARE v_dev_id INT;
     DECLARE EXIT HANDLER FOR SQLEXCEPTION 
     BEGIN
         ROLLBACK;
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Transaction Failed: Game Registration Aborted.';
+        RESIGNAL;
     END;
 
     START TRANSACTION;
 
+    -- Check if developer exists, if not create
+    SELECT developer_id INTO v_dev_id FROM Developer WHERE name = p_developer_name LIMIT 1;
+    
+    IF v_dev_id IS NULL THEN
+        INSERT INTO Developer (name) VALUES (p_developer_name);
+        SET v_dev_id = LAST_INSERT_ID();
+    END IF;
+
     INSERT INTO Game (title, developer_id, publisher_id, base_price_usd)
-    VALUES (p_title, p_developer_id, p_publisher_id, p_price);
+    VALUES (p_title, v_dev_id, p_publisher_id, p_price);
     
     SET @new_game_id = LAST_INSERT_ID();
 
@@ -460,16 +483,4 @@ BEGIN
     SELECT @new_game_id AS registered_game_id, 'SUCCESS' AS status;
 END;
 
--- SCALAR FUNCTION: CalculateROI (Rubric Enhancement)
-DROP FUNCTION IF EXISTS CalculateROI;
-CREATE FUNCTION CalculateROI(p_revenue BIGINT, p_budget BIGINT) 
-RETURNS DECIMAL(10,2)
-DETERMINISTIC
-BEGIN
-    DECLARE v_roi DECIMAL(10,2);
-    IF p_budget IS NULL OR p_budget = 0 THEN
-        RETURN 0.00;
-    END IF;
-    SET v_roi = ((p_revenue - p_budget) / p_budget) * 100;
-    RETURN v_roi;
-END;
+

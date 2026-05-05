@@ -47,11 +47,15 @@ like development budgets, engine licenses, multi-platform pricing, and user revi
 is usually scattered across completely different storefronts and internal records. 
 This fragmentation makes it incredibly difficult to analyze market trends.
 
-Obsyria solves this problem. What you are looking at is a centralized intelligence 
-dashboard. But beneath this clean UI is a highly-optimized, fully normalized 
-relational database. Our goal was to build a system that turns raw, fragmented 
-data into actionable industry insights. I'll now pass it over to discuss the 
-architectural blueprint that makes this possible."
+Obsyria solves this problem. What you are looking at is our presentation layer—
+a centralized intelligence dashboard. But the real power lies beneath this clean UI. 
+Our frontend is seamlessly integrated with a Node.js backend, which communicates 
+directly with a highly-optimized, cloud-hosted MySQL database deployed on Aiven.
+
+By utilizing secure parameterized queries from our application layer, our goal 
+was to build a robust, full-stack system that safely and efficiently turns raw, 
+fragmented data into actionable industry insights. I'll now pass it over to 
+discuss the architectural blueprint that makes this entire data flow possible."
 
 ================================================================================
   SPEAKER 2 — PHASE 2: DATABASE ARCHITECTURE & ER DIAGRAM (Time: 1:00 – 2:00)
@@ -83,30 +87,41 @@ This ER diagram served as the strict blueprint for our SQL schema."
 
 [SCREEN: Switch to MySQL Workbench / Aiven Cloud Console showing setup_db.sql]
 
-"Moving into the database implementation, we used DDL to translate that ER diagram 
-into nine core tables. 
+"For our implementation, we used DDL to create nine core tables, enforcing 
+strict referential integrity with Primary and Foreign Keys. 
 
 [SCREEN: Highlight the Game table definition showing Foreign Keys]
-We strictly enforce referential integrity using Primary and Foreign Keys. The entire 
-schema is normalized up to the Third Normal Form (3NF). We eliminated transitive 
-dependencies—for example, a Publisher's Tier is stored securely in the Publisher 
-table, not the Game table.
+
+The entire schema is fully normalized to the Third Normal Form (3NF). We 
+eliminated transitive dependencies—for example, Publisher Tiers are stored 
+only in the Publisher table, preventing update anomalies.
 
 [SCREEN: Scroll to the RegisterGameComplete procedure]
-For data integrity during inserts, we wrote an atomic transaction called 
-RegisterGameComplete. It uses START TRANSACTION, COMMIT, and ROLLBACK. If a game's 
-platform listing fails to save, the entire insert rolls back, guaranteeing the 
-ACID property of Atomicity.
 
-[SCREEN: Highlight the GameIntelligenceSummary View and CalculateROI function]
-To make querying efficient, we built views like GameIntelligenceSummary using 
-multiple INNER JOINS. We also pushed heavy math to the server using a deterministic 
-Scalar Function called CalculateROI, and we used IF-ELSEIF logic in stored 
-procedures to automatically classify a game's tier. 
+For DML operations, we wrote the `RegisterGameComplete` atomic transaction. 
+Registering a game writes to three separate tables. Using `START TRANSACTION` 
+and `ROLLBACK`, we guarantee the ACID property of Atomicity: either the entire 
+insert succeeds, or nothing is saved.
+
+[SCREEN: Highlight the GameIntelligenceSummary View]
+
+For querying, we built dynamic Views. `GameIntelligenceSummary` uses multiple 
+`INNER JOINS` to instantly combine game, developer, and engine data. We also 
+used `LEFT JOINS` for DLC analysis, ensuring games with zero DLCs still appear 
+in revenue reports.
+
+[SCREEN: Highlight the ClassifyGameTier Procedure and CalculateROI function]
+
+We also pushed heavy business logic directly to the backend. Our `ClassifyGameTier` 
+Stored Procedure uses `IF-ELSEIF` logic to dynamically categorize games. For 
+financials, our `CalculateROI` Scalar Function mathematically computes budget 
+and revenue to return exact percentages.
 
 [SCREEN: Show the CREATE INDEX statements]
-Finally, to handle scale, we implemented B-Tree Indexing on high-traffic columns 
-like Title and Metacritic Score, cutting our search latency by over 60 percent."
+
+Finally, to optimize performance, we added B-Tree Indexing on high-traffic 
+columns like Title and Metacritic Score, reducing our query latency by over 
+60 percent."
 
 ================================================================================
   SPEAKER 4 — PHASE 4: DASHBOARD DEEP-DIVE & OUTPUTS (Time: 3:30 – 5:00)
@@ -114,28 +129,42 @@ like Title and Metacritic Score, cutting our search latency by over 60 percent."
 
 [SCREEN: Switch back to the Live Dashboard / Application UI]
 
-"Finally, let's look at the output. Everything you see on this Obsyria dashboard 
-is dynamically powered by the SQL logic we just discussed. 
+"Finally, we bring all of this backend logic together into the presentation layer—
+the Obsyria dashboard. The output you see here isn't just static data; it is 
+dynamically generated by the advanced SQL structures we just discussed.
 
-[SCREEN: Point out specific charts or tables on the Dashboard]
+[SCREEN: Point to the ROI rankings on the Dashboard]
 
-For example, these ROI rankings aren't static text — they are generated live 
-by the CalculateROI scalar function executing on the backend. 
+For example, take a look at these financial rankings. These Return-on-Investment 
+percentages aren't hardcoded text. They are calculated on the fly by our 
+`CalculateROI` scalar function every time the dashboard loads. This ensures our 
+financial intelligence is always up to the millisecond.
 
-[SCREEN: Point to the Genre Analytics / Top Developer charts]
+[SCREEN: Highlight the Genre Analytics Chart]
 
-The Genre Analytics chart is pulling directly from our GenrePerformance view, 
-which utilizes GROUP BY and AVG aggregate functions to summarize the data. 
-Furthermore, the data highlighting our Top Developers is filtered using a 
-correlated subquery, which checks every single developer against the dynamic 
-average revenue of the entire database.
+If we look at the Genre Analytics chart, this visualization is pulling directly 
+from our `GenrePerformance` view. On the SQL side, this view utilizes `GROUP BY` 
+clauses and `AVG` aggregate functions. It instantly calculates the average revenue 
+and Metacritic scores across dozens of titles, grouping them neatly by their 
+primary genre for easy market analysis.
 
-By pushing the heavy lifting — the joins, transactions, subqueries, and scoring 
-logic — down to the database layer, the Obsyria platform remains incredibly fast 
-and accurate. 
+[SCREEN: Highlight the Top Developers Section]
 
-It fully meets the requirements for Entity design, Normalization, Advanced SQL, 
-and performance indexing. That concludes Team 2's presentation. Thank you."
+Similarly, our Top Developers spotlight isn't just a simple WHERE clause. It is 
+powered by a highly complex correlated subquery. The database evaluates every 
+single developer row-by-row, comparing their specific game revenues against the 
+dynamic average revenue of the entire database. Only those who beat the current 
+market average make it to this dashboard.
+
+[SCREEN: Final wide shot of the Dashboard]
+
+By keeping the heavy computational lifting—the ACID transactions, complex joins, 
+subqueries, and scoring algorithms—tightly secured at the database layer, the 
+Obsyria frontend remains lightweight, incredibly fast, and analytically accurate. 
+
+From 3NF normalization to B-Tree indexing, this project fully realizes a 
+professional-grade intelligence system. That concludes Team 2's presentation. 
+Thank you for your time."
 
 ================================================================================
   RUBRIC COVERAGE CHECKLIST:

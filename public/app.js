@@ -43,8 +43,9 @@ async function loadDashboard() {
         
         // Render Table
         const tbody = document.querySelector('#games-table tbody');
+        window.currentGamesData = games;
         tbody.innerHTML = games.map(g => `
-            <tr>
+            <tr onclick="showGameDetails(${g.game_id})" style="cursor: pointer;">
                 <td>
                     <div style="display: flex; align-items: center; gap: 1rem;">
                         ${g.cover_image_url ? `<img src="${g.cover_image_url}" alt="${g.title}" style="width: 80px; height: 38px; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">` : '<div style="width: 80px; height: 38px; background: #222; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: #666; border: 1px solid rgba(255,255,255,0.1);">NO COVER</div>'}
@@ -56,9 +57,8 @@ async function loadDashboard() {
                 <td>${g.release_date ? new Date(g.release_date).getFullYear() : 'TBD'}</td>
                 <td>${g.metacritic_score || 'N/A'}</td>
                 <td>$${g.revenue_est_usd ? (g.revenue_est_usd / 1000000).toFixed(1) + 'M' : 'N/A'}</td>
-                <td><button class="btn-delete" onclick="deleteGame(${g.game_id}, '${g.title.replace(/'/g, "\\'")}')">DELETE</button></td>
+                <td><button class="btn-delete" onclick="event.stopPropagation(); deleteGame(${g.game_id}, '${g.title.replace(/'/g, "\\'")}')">DELETE</button></td>
             </tr>
-
         `).join('');
     } catch (err) {
         console.error('Error loading games:', err);
@@ -72,7 +72,7 @@ async function deleteGame(gameId, title) {
         const res = await fetch(`${API_BASE}/games/${gameId}`, { method: 'DELETE' });
         const result = await res.json();
         if (result.status === 'DELETED') {
-            loadDashboard(); // Refresh table
+            globalRefresh(); 
         }
     } catch (err) {
         alert('Delete failed: ' + err.message);
@@ -80,95 +80,123 @@ async function deleteGame(gameId, title) {
 }
 
 // Intelligence Data
+window.intelligenceData = {};
+
+let chartInstances = {};
+function initChart(id, type, labels, data, label, isCurrency = false, isHorizontal = false) {
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (chartInstances[id]) chartInstances[id].destroy();
+    
+    Chart.defaults.color = '#888';
+    Chart.defaults.font.family = 'Inter';
+    
+    // Monochrome & Emerald palette to match the dark/glass theme
+    const colors = [
+        'rgba(255, 255, 255, 0.9)',    // Pure White
+        'rgba(16, 185, 129, 0.8)',     // Emerald (Matches ROI positive)
+        'rgba(161, 161, 170, 0.8)',    // Light Grey
+        'rgba(113, 113, 122, 0.8)',    // Mid Grey
+        'rgba(20, 184, 166, 0.8)',     // Teal (Secondary Accent)
+        'rgba(228, 228, 231, 0.8)',    // Silver
+        'rgba(82, 82, 91, 0.8)',       // Dark Grey
+        'rgba(52, 211, 153, 0.8)'      // Soft Emerald
+    ];
+    
+    const bgColors = data.map((_, i) => colors[i % colors.length]);
+    
+    chartInstances[id] = new Chart(ctx, {
+        type: type,
+        data: {
+            labels: labels,
+            datasets: [{
+                label: label,
+                data: data,
+                backgroundColor: bgColors,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: isHorizontal ? 'y' : 'x',
+            plugins: {
+                legend: { display: type === 'doughnut', position: 'right' },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            let val = ctx.raw;
+                            if (isCurrency) return '$' + val.toFixed(1) + 'M';
+                            return val;
+                        }
+                    }
+                }
+            },
+            scales: type === 'doughnut' ? {} : {
+                y: { grid: { color: 'rgba(255,255,255,0.05)' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
 async function loadIntelligence() {
     try {
         // ROI Analysis (CalculateROI Scalar Function)
         const roiRes = await fetch(`${API_BASE}/roi`);
-        const roiData = await roiRes.json();
+        window.intelligenceData.roi = await roiRes.json();
         const roiBody = document.querySelector('#roi-table tbody');
-        roiBody.innerHTML = roiData.map(r => `
-            <tr>
-                <td>${r.title}</td>
-                <td>${r.developer_name}</td>
-                <td>$${(r.budget / 1000000).toFixed(1)}M</td>
-                <td>$${(r.revenue / 1000000).toFixed(1)}M</td>
-                <td style="color: ${r.roi_pct > 0 ? '#4f4' : '#f44'}; font-weight: 700;">${r.roi_pct > 0 ? '+' : ''}${parseFloat(r.roi_pct).toFixed(0)}%</td>
-                <td>${r.metacritic_score || 'N/A'}</td>
-            </tr>
-        `).join('');
+        if (roiBody) {
+            roiBody.innerHTML = window.intelligenceData.roi.slice(0, 10).map(r => `
+                <tr>
+                    <td>${r.title}</td>
+                    <td>${r.developer_name}</td>
+                    <td>$${(r.budget / 1000000).toFixed(1)}M</td>
+                    <td>$${(r.revenue / 1000000).toFixed(1)}M</td>
+                    <td style="color: ${r.roi_pct > 0 ? '#4f4' : (r.roi_pct < 0 ? '#f44' : '#888')}; font-weight: 700;">${r.roi_pct > 0 ? '+' : ''}${parseFloat(r.roi_pct).toFixed(0)}%</td>
+                </tr>
+            `).join('');
+        }
 
-        // Above Average (Subquery)
-        const aboveRes = await fetch(`${API_BASE}/above-average`);
-        const aboveData = await aboveRes.json();
-        const aboveBody = document.querySelector('#above-avg-table tbody');
-        aboveBody.innerHTML = aboveData.map(a => `
-            <tr>
-                <td>${a.title}</td>
-                <td>${a.developer_name}</td>
-                <td><strong>${a.metacritic_score}</strong></td>
-                <td>$${a.revenue_est_usd ? (a.revenue_est_usd / 1000000).toFixed(1) + 'M' : 'N/A'}</td>
-            </tr>
-        `).join('');
+        // Top Developers (Correlated Subquery)
+        const topDevRes = await fetch(`${API_BASE}/top-developers`);
+        window.intelligenceData['top-developers'] = await topDevRes.json();
+        const topDevBody = document.querySelector('#top-dev-table tbody');
+        if (topDevBody) {
+            topDevBody.innerHTML = window.intelligenceData['top-developers'].slice(0, 10).map(d => `
+                <tr>
+                    <td>${d.name}</td>
+                    <td>${d.country || 'N/A'}</td>
+                    <td>${d.team_size || 'N/A'}</td>
+                    <td>${d.is_independent ? 'YES' : 'NO'}</td>
+                </tr>
+            `).join('');
+        }
 
         // Engine Analysis
         const engineRes = await fetch(`${API_BASE}/engines`);
-        const engines = await engineRes.json();
-        const engineBody = document.querySelector('#engine-table tbody');
-        engineBody.innerHTML = engines.map(e => `
-            <tr>
-                <td>${e.engine_name}</td>
-                <td><span class="badge">${e.license_type}</span></td>
-                <td>${e.game_count}</td>
-                <td>${Math.round(e.avg_score)}</td>
-                <td>$${(e.avg_revenue / 1000000).toFixed(1)}M</td>
-            </tr>
-        `).join('');
+        window.intelligenceData.engine = await engineRes.json();
+        initChart('engineChart', 'doughnut', window.intelligenceData.engine.map(e => e.engine_name), window.intelligenceData.engine.map(e => e.game_count), 'Games per Engine');
 
         // Genre Performance
         const genreRes = await fetch(`${API_BASE}/genres`);
-        const genres = await genreRes.json();
-        const genreBody = document.querySelector('#genre-table tbody');
-        genreBody.innerHTML = genres.map(g => `
-            <tr>
-                <td>${g.genre}</td>
-                <td>${g.game_count}</td>
-                <td>$${(g.avg_revenue / 1000000).toFixed(1)}M</td>
-                <td>${Math.round(g.avg_score)}</td>
-            </tr>
-        `).join('');
+        window.intelligenceData.genre = await genreRes.json();
+        initChart('genreChart', 'bar', window.intelligenceData.genre.map(g => g.genre), window.intelligenceData.genre.map(g => g.avg_revenue / 1000000), 'Avg Revenue (Millions USD)', true);
 
         // Publisher Impact
         const pubRes = await fetch(`${API_BASE}/publishers`);
-        const publishers = await pubRes.json();
-        const pubBody = document.querySelector('#publisher-table tbody');
-        pubBody.innerHTML = publishers.map(p => `
-            <tr>
-                <td>${p.publisher_name}</td>
-                <td><span class="badge ${getTierClass(p.tier)}">${p.tier}</span></td>
-                <td>${p.total_games}</td>
-                <td>${Math.round(p.avg_score || 0)}</td>
-                <td>$${p.avg_revenue ? (p.avg_revenue / 1000000).toFixed(1) + 'M' : 'N/A'}</td>
-            </tr>
-        `).join('');
+        window.intelligenceData.publisher = await pubRes.json();
+        initChart('publisherChart', 'bar', window.intelligenceData.publisher.slice(0, 8).map(p => p.publisher_name), window.intelligenceData.publisher.slice(0, 8).map(p => p.avg_score), 'Avg Critic Rating', false, true);
 
         // Platform Marketplace Comparison
         const platRes = await fetch(`${API_BASE}/platforms`);
-        const platforms = await platRes.json();
-        const platBody = document.querySelector('#platform-table tbody');
-        platBody.innerHTML = platforms.map(p => `
-            <tr>
-                <td>${p.title}</td>
-                <td><strong>${p.platform_name}</strong></td>
-                <td>$${parseFloat(p.price_usd).toFixed(2)}</td>
-                <td>${p.is_exclusive ? 'YES' : 'NO'}</td>
-                <td>${p.subscription_included ? 'YES' : 'NO'}</td>
-            </tr>
-        `).join('');
+        window.intelligenceData.platforms = await platRes.json();
 
         // === MARKET INSIGHTS (Computed from data) ===
         // Indie vs AAA ROI comparison
-        const indieGames = roiData.filter(r => r.budget < 10000000);
-        const aaaGames = roiData.filter(r => r.budget >= 100000000);
+        const indieGames = window.intelligenceData.roi.filter(r => r.budget < 50000000);
+        const aaaGames = window.intelligenceData.roi.filter(r => r.budget >= 100000000);
         const avgIndieROI = indieGames.length ? (indieGames.reduce((a,r) => a + parseFloat(r.roi_pct), 0) / indieGames.length).toFixed(0) : 0;
         const avgAaaROI = aaaGames.length ? (aaaGames.reduce((a,r) => a + parseFloat(r.roi_pct), 0) / aaaGames.length).toFixed(0) : 0;
         
@@ -176,13 +204,13 @@ async function loadIntelligence() {
         document.getElementById('insight-aaa-roi').textContent = `+${avgAaaROI}%`;
         
         // Best genre by score
-        const topGenre = genres.sort((a,b) => b.avg_score - a.avg_score)[0];
+        const topGenre = window.intelligenceData.genre.sort((a,b) => b.avg_score - a.avg_score)[0];
         document.getElementById('insight-top-genre').textContent = topGenre ? topGenre.genre : '--';
         document.getElementById('insight-top-genre-score').textContent = topGenre ? Math.round(topGenre.avg_score) + '/100' : '--';
 
         // Most games on which platform
         const platformCounts = {};
-        platforms.forEach(p => { platformCounts[p.platform_name] = (platformCounts[p.platform_name] || 0) + 1; });
+        window.intelligenceData.platforms.forEach(p => { platformCounts[p.platform_name] = (platformCounts[p.platform_name] || 0) + 1; });
         const topPlatform = Object.entries(platformCounts).sort((a,b) => b[1] - a[1])[0];
         document.getElementById('insight-top-platform').textContent = topPlatform ? topPlatform[0] : '--';
         document.getElementById('insight-platform-count').textContent = topPlatform ? topPlatform[1] + ' titles' : '--';
@@ -198,14 +226,18 @@ async function loadMetadata() {
         const res = await fetch(`${API_BASE}/metadata`);
         const data = await res.json();
         
-        const populate = (id, list, valField, textField) => {
+        const populate = (id, list, valField, textField, isDatalist = false) => {
             const el = document.getElementById(id);
             if (!el) return;
-            el.innerHTML = '<option value="">Select...</option>' + 
-                list.map(i => `<option value="${i[valField]}">${i[textField]}</option>`).join('');
+            if (isDatalist) {
+                el.innerHTML = list.map(i => `<option value="${i[textField]}">`).join('');
+            } else {
+                el.innerHTML = '<option value="">Select...</option>' + 
+                    list.map(i => `<option value="${i[valField]}">${i[textField]}</option>`).join('');
+            }
         };
 
-        populate('reg-dev', data.developers, 'developer_id', 'name');
+        populate('dev-list', data.developers, 'developer_id', 'name', true);
         populate('reg-pub', data.publishers, 'publisher_id', 'name');
         populate('reg-genre', data.genres, 'genre_id', 'name');
         populate('reg-platform', data.platforms, 'platform_id', 'name');
@@ -240,17 +272,18 @@ async function classifyGame() {
         
         // ROI Calculation
         const revenue = game.revenue_est_usd || 0;
-        const budget = result.budget_score > 0 ? (result.budget_score * 5000000) : 100000;
-        const roi = revenue > 0 ? (((revenue - budget) / budget) * 100).toFixed(1) : 0;
+        const budget = game.dev_budget_usd || (result.budget_score > 0 ? (result.budget_score * 5000000) : 100000);
+        const roi = budget > 0 ? (((revenue - budget) / budget) * 100).toFixed(1) : 0;
         
-        document.getElementById('res-score').textContent = roi > 0 ? `+${roi}%` : 'N/A';
-        document.getElementById('res-score').style.color = roi > 0 ? '#00ff00' : '#ff4444';
+        const sign = roi > 0 ? '+' : '';
+        document.getElementById('res-score').textContent = `${sign}${roi}%`;
+        document.getElementById('res-score').style.color = roi > 0 ? '#4f4' : (roi < 0 ? '#f44' : '#888');
 
         // Technical Summary
         let summary = `Unit <strong>${game.title}</strong> is categorized under <strong>${result.tier}</strong> scale operations. `;
         
         if (result.tier === 'AAA') {
-            summary += `This classification is driven by a massive labor force of ${game.team_size}+ developers and high capital expenditure. `;
+            summary += `This classification is driven by a massive labor force of ${game.team_size_at_launch || 100}+ developers and high capital expenditure. `;
         } else if (result.tier === 'AA') {
             summary += `It occupies the mid-market segment with optimized production costs and professional publishing support. `;
         } else {
@@ -281,7 +314,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     const payload = {
         title: document.getElementById('reg-title').value,
         price: document.getElementById('reg-price').value,
-        developer_id: document.getElementById('reg-dev').value,
+        developer_name: document.getElementById('reg-dev').value,
         publisher_id: document.getElementById('reg-pub').value,
         genre_id: document.getElementById('reg-genre').value,
         platform_id: document.getElementById('reg-platform').value
@@ -298,7 +331,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
         if (result.status === 'SUCCESS') {
             alert('Game Registered Successfully! ID: ' + result.registered_game_id);
             e.target.reset();
-            loadDashboard();
+            globalRefresh();
         } else {
             alert('Error: ' + result.error);
         }
@@ -315,20 +348,94 @@ function getTierClass(tier) {
     return 'badge-indie';
 }
 
+// Global Sync
+async function globalRefresh() {
+    loadDashboard();
+    if (document.getElementById('intelligence').style.display !== 'none') loadIntelligence();
+    if (document.getElementById('admin').style.display !== 'none') loadMetadata();
+}
+
 // Init
 loadDashboard();
 
-// Search Filter Logic
+// Search Filter Logic (Main Dashboard)
 document.getElementById('search-input')?.addEventListener('input', (e) => {
     const term = e.target.value.toLowerCase();
     const rows = document.querySelectorAll('#games-table tbody tr');
     
     rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        if (text.includes(term)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
+        row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
     });
 });
+
+// Universal Table Search Helper
+function setupTableSearch(inputId, tableBodySelector) {
+    document.getElementById(inputId)?.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll(`${tableBodySelector} tr`);
+        rows.forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
+        });
+    });
+}
+
+setupTableSearch('roi-search-input', '#roi-table tbody');
+setupTableSearch('top-dev-search-input', '#top-dev-table tbody');
+setupTableSearch('modal-search-input', '#data-modal-body');
+
+window.showGameDetails = function(gameId) {
+    const game = window.currentGamesData?.find(g => g.game_id === gameId);
+    if (!game) return;
+    document.getElementById('modal-title').textContent = game.title;
+    document.getElementById('modal-dev-pub').textContent = `${game.developer_name} / ${game.publisher_name}`;
+    document.getElementById('modal-id').textContent = game.game_id;
+    document.getElementById('modal-engine').textContent = game.engine_name || 'Unknown';
+    document.getElementById('modal-year').textContent = game.release_date ? new Date(game.release_date).getFullYear() : 'N/A';
+    document.getElementById('modal-meta').textContent = game.metacritic_score || 'N/A';
+    document.getElementById('modal-copies').textContent = game.copies_sold_est ? (game.copies_sold_est / 1000000).toFixed(1) + 'M' : 'N/A';
+    document.getElementById('modal-price').textContent = game.base_price_usd ? '$' + parseFloat(game.base_price_usd).toFixed(2) : 'Free';
+    document.getElementById('modal-revenue').textContent = game.revenue_est_usd ? '$' + (game.revenue_est_usd / 1000000).toFixed(1) + 'M' : 'N/A';
+    document.getElementById('modal-pub-tier').textContent = game.publisher_tier || 'N/A';
+    document.getElementById('game-modal').style.display = 'flex';
+};
+
+window.openDataModal = function(title, type) {
+    document.getElementById('data-modal-title').textContent = title;
+    
+    const searchInput = document.getElementById('modal-search-input');
+    if (searchInput) searchInput.value = '';
+    
+    const thead = document.getElementById('data-modal-head');
+    const tbody = document.getElementById('data-modal-body');
+    const data = window.intelligenceData[type];
+    
+    if (!data || data.length === 0) {
+        thead.innerHTML = '';
+        tbody.innerHTML = '<tr><td style="text-align: center; color: #888;">No data available</td></tr>';
+        document.getElementById('data-modal').style.display = 'flex';
+        return;
+    }
+
+    // Generate Headers dynamically based on the JSON keys returned from the API
+    const keys = Object.keys(data[0]);
+    thead.innerHTML = `<tr>${keys.map(k => `<th>${k.replace(/_/g, ' ').toUpperCase()}</th>`).join('')}</tr>`;
+
+    // Generate Body dynamically
+    tbody.innerHTML = data.map(row => `
+        <tr>${keys.map(k => {
+            let val = row[k];
+            if (val === null || val === undefined) return '<td style="color: #666;">N/A</td>';
+            // Format currency if key suggests money
+            if ((k.includes('revenue') || k.includes('price') || k.includes('budget')) && !isNaN(val)) {
+                return `<td>$${parseFloat(val).toLocaleString()}</td>`;
+            }
+            // Format percentages if key suggests ratio/pct
+            if (k.includes('pct') && !isNaN(val)) {
+                return `<td>${parseFloat(val).toFixed(1)}%</td>`;
+            }
+            return `<td>${val}</td>`;
+        }).join('')}</tr>
+    `).join('');
+
+    document.getElementById('data-modal').style.display = 'flex';
+};

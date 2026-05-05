@@ -1,5 +1,5 @@
--- NEXUS GAME INTELLIGENCE SYSTEM - SEED DATA
-USE nexusdb;
+-- OBSYRIA GAME INTELLIGENCE SYSTEM - SEED DATA
+USE obsyria;
 
 -- 1. Developers
 INSERT INTO Developer (name, country, founded_year, team_size, is_independent, parent_company) VALUES

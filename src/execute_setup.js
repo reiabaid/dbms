@@ -12,11 +12,11 @@ async function runSetup() {
     // We execute the whole script. 
     // Since multipleStatements is enabled, this will run all commands in order.
     await db.query(sql);
-    console.log('\n✅ Database "nexusdb" and all components created successfully!');
-    
+    console.log('\n✅ Database "obsyria" and all components created successfully!');
+
     // Verify tables
-    const [tables] = await db.query('SHOW TABLES FROM nexusdb');
-    console.log(`\nTables created in nexusdb (${tables.length}):`);
+    const [tables] = await db.query('SHOW TABLES FROM obsyria');
+    console.log(`\nTables created in obsyria (${tables.length}):`);
     tables.forEach(table => {
       console.log(`- ${Object.values(table)[0]}`);
     });
