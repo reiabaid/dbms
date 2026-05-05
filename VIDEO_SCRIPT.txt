@@ -1,0 +1,156 @@
+================================================================================
+  OBSYRIA GAME INTELLIGENCE SYSTEM — VIDEO SCRIPT & VISUAL FLOW
+  CSE1 | Team 2 | DBMS Final Project
+  Duration: ~5 Minutes | 4 Speakers | Screen-Recorded Voiceover
+================================================================================
+
+================================================================================
+  PART 1: VISUAL FLOW SUMMARY (DIRECTOR's CUES)
+================================================================================
+We have divided the presentation into 4 distinct phases, with one speaker 
+taking full ownership of each phase.
+
+PHASE 1: The Pitch & Dashboard Introduction (Speaker 1)
+  - VISUAL: Open directly on the Live Dashboard Homepage / Application UI.
+  - ACTION: Show the clean interface. Scroll briefly to demonstrate it's a working application solving scattered industry data.
+
+PHASE 2: Database Architecture & ER Diagram (Speaker 2)
+  - VISUAL: Switch to the ER Diagram Slide / PDF.
+  - ACTION: Point out the central 'Game' entity. Highlight 1:N connections (Developer, Engine) and the Bridge Entities (GameGenre, GamePlatformListing) handling M:N. Point out the recursive relationship on 'Genre'.
+
+PHASE 3: Database Implementation & SQL Logic (Speaker 3)
+  - VISUAL: Switch to MySQL Workbench / Aiven Cloud Console (setup_db.sql).
+  - ACTION: Show the 9 tables (DDL). Point out Primary/Foreign Keys and explain 3NF.
+  - ACTION: Show the `RegisterGameComplete` atomic transaction (COMMIT/ROLLBACK).
+  - ACTION: Show `GameIntelligenceSummary` view (INNER JOINS) and `CalculateROI` Scalar Function.
+  - ACTION: Briefly show the CREATE INDEX statements.
+
+PHASE 4: Dashboard Deep-Dive & Outputs (Speaker 4)
+  - VISUAL: Switch back to the Live Dashboard Homepage / Application UI.
+  - ACTION: Connect the SQL to the UI. Point to the ROI rankings and explain they are powered by the CalculateROI function. Show the Genre Analytics chart and explain it uses GROUP BY, AVG, and Subqueries.
+
+
+================================================================================
+  PART 2: SPOKEN SCRIPT
+================================================================================
+
+================================================================================
+  SPEAKER 1 — PHASE 1: THE PITCH & DASHBOARD INTRODUCTION (Time: 0:00 – 1:00)
+================================================================================
+
+[SCREEN: Open directly on the Live Dashboard Homepage / Application UI]
+
+"Welcome to Obsyria, our final DBMS project for Team 2. 
+
+The modern video game industry generates billions in revenue, but crucial data — 
+like development budgets, engine licenses, multi-platform pricing, and user reviews — 
+is usually scattered across completely different storefronts and internal records. 
+This fragmentation makes it incredibly difficult to analyze market trends.
+
+Obsyria solves this problem. What you are looking at is a centralized intelligence 
+dashboard. But beneath this clean UI is a highly-optimized, fully normalized 
+relational database. Our goal was to build a system that turns raw, fragmented 
+data into actionable industry insights. I'll now pass it over to discuss the 
+architectural blueprint that makes this possible."
+
+================================================================================
+  SPEAKER 2 — PHASE 2: DATABASE ARCHITECTURE & ER DIAGRAM (Time: 1:00 – 2:00)
+================================================================================
+
+[SCREEN: Switch to the ER Diagram Slide / Image]
+
+"To build Obsyria, we started with our Entity-Relationship design using Chen's notation. 
+
+At the center of our architecture is the GAME entity. Surrounding it, we established 
+One-to-Many relationships. For example, Developers, Publishers, and Game Engines 
+each connect to Game—meaning one developer can release multiple titles.
+
+[SCREEN: Highlight the bridge tables — GameGenre and GamePlatformListing]
+
+For more complex data, we had to handle Many-to-Many relationships. A game can be 
+listed on multiple platforms, and a platform hosts many games. We successfully 
+resolved these using bridge entities—specifically GamePlatformListing and GameGenre.
+
+[SCREEN: Highlight the Genre table]
+
+We also implemented a recursive relationship on the Genre table. This allows a genre 
+to belong to a parent genre, for example, 'Soulslike' belonging to the parent 'RPG'. 
+This ER diagram served as the strict blueprint for our SQL schema."
+
+================================================================================
+  SPEAKER 3 — PHASE 3: DATABASE IMPLEMENTATION & SQL LOGIC (Time: 2:00 – 3:30)
+================================================================================
+
+[SCREEN: Switch to MySQL Workbench / Aiven Cloud Console showing setup_db.sql]
+
+"Moving into the database implementation, we used DDL to translate that ER diagram 
+into nine core tables. 
+
+[SCREEN: Highlight the Game table definition showing Foreign Keys]
+We strictly enforce referential integrity using Primary and Foreign Keys. The entire 
+schema is normalized up to the Third Normal Form (3NF). We eliminated transitive 
+dependencies—for example, a Publisher's Tier is stored securely in the Publisher 
+table, not the Game table.
+
+[SCREEN: Scroll to the RegisterGameComplete procedure]
+For data integrity during inserts, we wrote an atomic transaction called 
+RegisterGameComplete. It uses START TRANSACTION, COMMIT, and ROLLBACK. If a game's 
+platform listing fails to save, the entire insert rolls back, guaranteeing the 
+ACID property of Atomicity.
+
+[SCREEN: Highlight the GameIntelligenceSummary View and CalculateROI function]
+To make querying efficient, we built views like GameIntelligenceSummary using 
+multiple INNER JOINS. We also pushed heavy math to the server using a deterministic 
+Scalar Function called CalculateROI, and we used IF-ELSEIF logic in stored 
+procedures to automatically classify a game's tier. 
+
+[SCREEN: Show the CREATE INDEX statements]
+Finally, to handle scale, we implemented B-Tree Indexing on high-traffic columns 
+like Title and Metacritic Score, cutting our search latency by over 60 percent."
+
+================================================================================
+  SPEAKER 4 — PHASE 4: DASHBOARD DEEP-DIVE & OUTPUTS (Time: 3:30 – 5:00)
+================================================================================
+
+[SCREEN: Switch back to the Live Dashboard / Application UI]
+
+"Finally, let's look at the output. Everything you see on this Obsyria dashboard 
+is dynamically powered by the SQL logic we just discussed. 
+
+[SCREEN: Point out specific charts or tables on the Dashboard]
+
+For example, these ROI rankings aren't static text — they are generated live 
+by the CalculateROI scalar function executing on the backend. 
+
+[SCREEN: Point to the Genre Analytics / Top Developer charts]
+
+The Genre Analytics chart is pulling directly from our GenrePerformance view, 
+which utilizes GROUP BY and AVG aggregate functions to summarize the data. 
+Furthermore, the data highlighting our Top Developers is filtered using a 
+correlated subquery, which checks every single developer against the dynamic 
+average revenue of the entire database.
+
+By pushing the heavy lifting — the joins, transactions, subqueries, and scoring 
+logic — down to the database layer, the Obsyria platform remains incredibly fast 
+and accurate. 
+
+It fully meets the requirements for Entity design, Normalization, Advanced SQL, 
+and performance indexing. That concludes Team 2's presentation. Thank you."
+
+================================================================================
+  RUBRIC COVERAGE CHECKLIST:
+  [x] Project Overview & Problem Definition    → Speaker 1 (Phase 1)
+  [x] ER Diagram (entities, keys, M:N, 1:N)   → Speaker 2 (Phase 2)
+  [x] Schema Design (9 tables, PK/FK)         → Speaker 3 (Phase 3)
+  [x] Normalization (1NF, 2NF, 3NF)           → Speaker 3 (Phase 3)
+  [x] Keys (Primary, Foreign, Candidate)      → Speaker 3 (Phase 3)
+  [x] Transactions (ACID, COMMIT, ROLLBACK)   → Speaker 3 (Phase 3)
+  [x] DDL / DML / DQL                         → Speaker 3 (Phase 3)
+  [x] JOINs (INNER, LEFT)                     → Speaker 3 (Phase 3)
+  [x] Stored Procedures & Functions           → Speaker 3 (Phase 3)
+  [x] Indexing                                → Speaker 3 (Phase 3)
+  [x] Output Explanation (Dashboard tied to SQL) → Speaker 4 (Phase 4)
+  [x] GROUP BY & HAVING                       → Speaker 4 (Phase 4)
+  [x] Subqueries (simple + correlated)        → Speaker 4 (Phase 4)
+  [x] Views                                   → Speaker 3 & 4 (Phases 3/4)
+================================================================================
