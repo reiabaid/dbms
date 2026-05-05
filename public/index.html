@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GAME INTELLIGENCE | DATABASE</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <nav>
+        <div class="logo">GAME INTELLIGENCE</div>
+        <ul>
+            <li><a href="#" class="active" data-page="dashboard">DASHBOARD</a></li>
+            <li><a href="#" data-page="intelligence">INTELLIGENCE HUB</a></li>
+            <li><a href="#" data-page="classifier">TIER CLASSIFIER</a></li>
+            <li><a href="#" data-page="admin">ATOMIC REGISTRATION</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <div id="dashboard" class="page-content animate-fade">
+            <header>
+                <h1>SYSTEM OVERVIEW</h1>
+                <p class="subtitle">GAME INTELLIGENCE / OPERATIONAL HUB</p>
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Total Records</div>
+                    <div id="stat-total-games" class="stat-value">--</div>
+                    <div class="stat-label">Units Registered</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Average Critic Rating</div>
+                    <div id="stat-avg-score" class="stat-value">--</div>
+                    <div class="stat-label">Metacritic Benchmark</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Dominant Engine</div>
+                    <div id="stat-top-engine" class="stat-value">--</div>
+                    <div class="stat-label">Market Deployment</div>
+                </div>
+            </div>
+
+            <div class="data-section">
+                <div class="section-header">
+                    <h2>Game Inventory</h2>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <input type="text" id="search-input" placeholder="Search by title, dev, or publisher..." 
+                            style="padding: 0.5rem 1rem; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); color: #fff; border-radius: 4px; width: 250px; font-family: 'Inter', sans-serif;">
+                        <button onclick="loadGames()">REFRESH</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="games-table">
+                        <thead>
+                            <tr>
+                                <th>TITLE</th>
+                                <th>DEVELOPER</th>
+                                <th>PUBLISHER</th>
+                                <th>RELEASE</th>
+                                <th>CRITIC RATING</th>
+                                <th>REVENUE</th>
+                                <th>ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="intelligence" class="page-content animate-fade" style="display: none;">
+            <header>
+                <h1>INTELLIGENCE HUB</h1>
+                <p class="subtitle">What does the gaming market look like right now?</p>
+            </header>
+
+            <h3 style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; letter-spacing: 0.15em;">
+                MARKET INSIGHTS AT A GLANCE</h3>
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="stat-card">
+                    <div class="stat-label">INDIE AVG ROI</div>
+                    <div id="insight-indie-roi" class="stat-value" style="color: #4f4;">--</div>
+                    <div class="stat-label">Return on Investment</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">AAA AVG ROI</div>
+                    <div id="insight-aaa-roi" class="stat-value">--</div>
+                    <div class="stat-label">Return on Investment</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">HIGHEST RATED GENRE</div>
+                    <div id="insight-top-genre" class="stat-value">--</div>
+                    <div id="insight-top-genre-score" class="stat-label">--</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">DOMINANT PLATFORM</div>
+                    <div id="insight-top-platform" class="stat-value">--</div>
+                    <div id="insight-platform-count" class="stat-label">--</div>
+                </div>
+            </div>
+
+            <div class="data-section">
+                <div class="section-header">
+                    <h2>ROI ANALYSIS</h2>
+                    <span style="font-size: 0.65rem; color: var(--text-muted);">USES: CalculateROI() SCALAR
+                        FUNCTION</span>
+                </div>
+                <table id="roi-table">
+                    <thead>
+                        <tr>
+                            <th>TITLE</th>
+                            <th>DEVELOPER</th>
+                            <th>BUDGET</th>
+                            <th>REVENUE</th>
+                            <th>ROI %</th>
+                            <th>CRITIC RATING</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="data-section">
+                <div class="section-header">
+                    <h2>ABOVE AVERAGE PERFORMERS</h2>
+                    <span style="font-size: 0.65rem; color: var(--text-muted);">USES: SUBQUERY (WHERE score > SELECT
+                        AVG)</span>
+                </div>
+                <table id="above-avg-table">
+                    <thead>
+                        <tr>
+                            <th>TITLE</th>
+                            <th>DEVELOPER</th>
+                            <th>CRITIC RATING</th>
+                            <th>REVENUE</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="data-section">
+                <div class="section-header">
+                    <h2>ENGINE ANALYSIS</h2>
+                </div>
+                <table id="engine-table">
+                    <thead>
+                        <tr>
+                            <th>ENGINE</th>
+                            <th>LICENSE</th>
+                            <th>UNITS</th>
+                            <th>AVG CRITIC RATING</th>
+                            <th>AVG REVENUE</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="data-section">
+                <div class="section-header">
+                    <h2>GENRE PERFORMANCE</h2>
+                    <span style="font-size: 0.65rem; color: var(--text-muted);">USES: GROUP BY + AGGREGATE
+                        FUNCTIONS</span>
+                </div>
+                <table id="genre-table">
+                    <thead>
+                        <tr>
+                            <th>GENRE</th>
+                            <th>COUNT</th>
+                            <th>AVG REVENUE</th>
+                            <th>AVG CRITIC RATING</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="data-section">
+                <div class="section-header">
+                    <h2>PUBLISHER IMPACT</h2>
+                    <span style="font-size: 0.65rem; color: var(--text-muted);">USES: GROUP BY + JOIN</span>
+                </div>
+                <table id="publisher-table">
+                    <thead>
+                        <tr>
+                            <th>PUBLISHER</th>
+                            <th>TIER</th>
+                            <th>GAMES</th>
+                            <th>AVG CRITIC RATING</th>
+                            <th>AVG REVENUE</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="data-section">
+                <div class="section-header">
+                    <h2>PLATFORM MARKETPLACE COMPARISON</h2>
+                    <span style="font-size: 0.65rem; color: var(--text-muted);">USES: JOIN (3 TABLES) + VIEW</span>
+                </div>
+                <table id="platform-table">
+                    <thead>
+                        <tr>
+                            <th>GAME</th>
+                            <th>PLATFORM</th>
+                            <th>PRICE</th>
+                            <th>EXCLUSIVE</th>
+                            <th>ON SUBSCRIPTION</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="classifier" class="page-content animate-fade" style="display: none;">
+            <header>
+                <h1>TIER CLASSIFIER</h1>
+                <p class="subtitle">Industry-standard scale analysis using weighted production metrics.</p>
+            </header>
+
+            <div class="data-section" style="padding: 2.5rem;">
+                <div class="form-group">
+                    <label>SELECT TARGET UNIT (GAME_ID)</label>
+                    <select id="select-game-classify">
+                        <option value="">SELECT...</option>
+                    </select>
+                </div>
+                <button onclick="classifyGame()">EXECUTE CLASSIFICATION</button>
+
+                <div id="classify-result" style="margin-top: 3rem; display: none;">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">ASSIGNED TIER</div>
+                            <div id="res-tier" class="stat-value">--</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">FINANCIAL YIELD (ROI)</div>
+                            <div id="res-score" class="stat-value">--</div>
+                        </div>
+                    </div>
+
+                    <div class="data-section"
+                        style="padding: 2rem; border-radius: 0; background: rgba(255,255,255,0.02);">
+                        <h3 style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">DATA
+                            INTERPRETATION</h3>
+                        <p id="res-summary" style="font-size: 1.1rem; line-height: 1.6; color: #fff;">
+                            <!-- Technical summary goes here -->
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="admin" class="page-content animate-fade" style="display: none;">
+            <header>
+                <h1>REGISTRATION</h1>
+                <p class="subtitle">Atomic Database Insertion</p>
+            </header>
+
+            <div class="data-section" style="padding: 2.5rem;">
+                <form id="register-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>UNIT TITLE</label>
+                            <input type="text" id="reg-title" required>
+                        </div>
+                        <div class="form-group">
+                            <label>PRICE (USD)</label>
+                            <input type="number" step="0.01" id="reg-price" required>
+                        </div>
+                        <div class="form-group">
+                            <label>DEVELOPER ENTITY</label>
+                            <select id="reg-dev" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>PUBLISHING HOUSE</label>
+                            <select id="reg-pub" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>PRIMARY GENRE</label>
+                            <select id="reg-genre" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label>DEPLOYMENT PLATFORM</label>
+                            <select id="reg-platform" required></select>
+                        </div>
+                    </div>
+                    <button type="submit">COMMIT TRANSACTION</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
