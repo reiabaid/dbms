@@ -643,6 +643,70 @@ window.currentGamesData = games;
 Games data is stored on the global `window` object so that the `showGameDetails()` function (called from inline onclick) can access it.
 This is a common pattern when you need onclick handlers in innerHTML-generated strings to access JavaScript data, since closures do not work well there.
 
+### Registration form — developer datalist and find-or-create
+
+The DEVELOPER ENTITY field is an `<input list="dev-list">` — a plain text input that shows autocomplete suggestions from a `<datalist>`.
+
+```javascript
+populate('dev-list', data.developers, 'name', 'name', true);
+```
+
+The datalist is populated with developer names as option values (not IDs). When the user picks an existing developer from the dropdown the input value becomes that developer's name string. When the user types a completely new name it stays as that new name string. Either way the input always holds a name, never a numeric ID.
+
+Why names and not IDs: The stored procedure `RegisterGameComplete` takes `p_developer_name VARCHAR(100)`. It runs a find-or-create internally:
+- If the name exists in the Developer table it returns the existing `developer_id`
+- If the name does not exist it INSERT a new Developer row and uses the new ID
+
+The payload from the form sends `developer_name` as the key:
+```javascript
+const payload = {
+    title:          document.getElementById('reg-title').value,
+    price:          document.getElementById('reg-price').value,
+    developer_name: document.getElementById('reg-dev').value,
+    publisher_id:   document.getElementById('reg-pub').value,
+    genre_id:       document.getElementById('reg-genre').value,
+    platform_id:    document.getElementById('reg-platform').value
+};
+```
+
+The server destructures `developer_name` from req.body and passes it to the stored procedure. This key name must match exactly — if it ever becomes `developer_id` or `undefined`, the procedure receives NULL and MySQL throws "Column 'name' cannot be null" because `Developer.name` has a NOT NULL constraint.
+
+What happens in the database when the form is submitted:
+1. Developer table — find or create the developer by name
+2. Game table — INSERT the new game row (triggers fire: price=0 sets is_free_to_play, metacritic validated)
+3. GameGenre table — INSERT (game_id, genre_id, is_primary=TRUE)
+4. GamePlatformListing table — INSERT (game_id, platform_id, price_usd) — this fires the auto_subscription_flag trigger which updates Game.on_subscription_day1 if applicable
+All four happen inside one transaction — if any step fails everything rolls back.
+
+### globalRefresh — keeping all pages in sync after a write
+
+After a successful registration:
+```javascript
+async function globalRefresh() {
+    loadDashboard();
+    if (document.getElementById('intelligence').style.display !== 'none') loadIntelligence();
+    if (document.getElementById('admin').style.display !== 'none') loadMetadata();
+}
+```
+
+The dashboard is always refreshed. Intelligence Hub and the form dropdowns are only refreshed if they are currently visible. This avoids unnecessary API calls for pages the user cannot see.
+
+### Column sorting — sortGames
+
+```javascript
+window.sortGames = function(key) {
+    if (sortState.key === key) sortState.asc = !sortState.asc;
+    else { sortState.key = key; sortState.asc = true; }
+    const sorted = [...window.currentGamesData].sort((a, b) => { ... });
+    window.currentGamesData = sorted;
+    // re-render tbody with sorted array
+};
+```
+
+Sorting is entirely client-side — no SQL query fires on each click. The already-loaded `window.currentGamesData` array is sorted in place using JavaScript's `.sort()` with a toggle for ascending/descending. The table body is re-rendered from the sorted array. This works because the full dataset is already in memory after `loadDashboard()`.
+
+`window.loadGames` is an alias for `loadDashboard()` used by the REFRESH button in the HTML. Keeping inline onclick handlers in HTML pointing to short names and aliasing them in JS avoids changing HTML every time a function is renamed.
+
 ---
 
 ## Summary — How It All Flows Together

@@ -377,6 +377,45 @@ async function globalRefresh() {
     if (document.getElementById('admin').style.display !== 'none') loadMetadata();
 }
 
+// Aliases for inline HTML handlers
+window.loadGames = loadDashboard;
+
+// Column sort for the games table
+let sortState = { key: null, asc: true };
+window.sortGames = function(key) {
+    if (sortState.key === key) {
+        sortState.asc = !sortState.asc;
+    } else {
+        sortState.key = key;
+        sortState.asc = true;
+    }
+    const sorted = [...(window.currentGamesData || [])].sort((a, b) => {
+        const av = a[key] ?? '';
+        const bv = b[key] ?? '';
+        if (av < bv) return sortState.asc ? -1 : 1;
+        if (av > bv) return sortState.asc ? 1 : -1;
+        return 0;
+    });
+    window.currentGamesData = sorted;
+    const tbody = document.querySelector('#games-table tbody');
+    tbody.innerHTML = sorted.map(g => `
+        <tr onclick="showGameDetails(${g.game_id})" style="cursor: pointer;">
+            <td>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    ${g.cover_image_url ? `<img src="${g.cover_image_url}" alt="${g.title}" style="width: 80px; height: 38px; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">` : '<div style="width: 80px; height: 38px; background: #222; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: #666; border: 1px solid rgba(255,255,255,0.1);">NO COVER</div>'}
+                    <strong>${g.title}</strong>
+                </div>
+            </td>
+            <td>${g.developer_name}</td>
+            <td><span class="badge ${getTierClass(g.publisher_tier)}">${g.publisher_name}</span></td>
+            <td>${g.release_date ? new Date(g.release_date).getFullYear() : 'TBD'}</td>
+            <td>${g.metacritic_score || 'N/A'}</td>
+            <td>$${g.revenue_est_usd ? (g.revenue_est_usd / 1000000).toFixed(1) + 'M' : 'N/A'}</td>
+            <td><button class="btn-delete" onclick="event.stopPropagation(); deleteGame(${g.game_id}, '${g.title.replace(/'/g, "\\'")}')">DELETE</button></td>
+        </tr>
+    `).join('');
+};
+
 // Init
 loadDashboard();
 

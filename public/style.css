@@ -212,12 +212,18 @@ th {
     letter-spacing: 1px;
     cursor: default;
     transition: background 0.2s;
+    white-space: nowrap;
 }
 
-th[onclick]:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
-    cursor: pointer;
+.sort-icon {
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+    opacity: 0.3;
+    transition: opacity 0.2s;
+}
+
+th[onclick]:hover .sort-icon {
+    opacity: 1;
 }
 
 td {
