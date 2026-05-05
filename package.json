@@ -7,7 +7,8 @@
     "setup": "node src/execute_setup.js",
     "test": "node src/test-connection.js",
     "seed": "node -e \"const fs = require('fs'); const db = require('./src/db'); async function seed() { const sql = fs.readFileSync('sql/seed_data.sql', 'utf8'); await db.query(sql); console.log('✅ Seed data inserted!'); await db.end(); } seed();\"",
-    "seed-extended": "node -e \"const fs = require('fs'); const db = require('./src/db'); async function seed() { const sql = fs.readFileSync('sql/extended_seed.sql', 'utf8'); await db.query(sql); console.log('✅ Extended seed data inserted!'); await db.end(); } seed();\"",
+    "pull-data": "node pull_real_data.js",
+    "seed-marketplaces": "node seed_marketplaces.js",
     "start": "node server.js"
   },
   "keywords": [],

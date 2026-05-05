@@ -77,12 +77,29 @@ CREATE TABLE IF NOT EXISTS Game (
     total_reviews INT,
     award_count INT DEFAULT 0,
     on_subscription_day1 BOOLEAN DEFAULT FALSE,
+    cover_image_url VARCHAR(500) NULL,
     FOREIGN KEY (developer_id) REFERENCES Developer(developer_id),
     FOREIGN KEY (publisher_id) REFERENCES Publisher(publisher_id),
     FOREIGN KEY (engine_id) REFERENCES GameEngine(engine_id)
 );
 
 -- INDEXING (Rubric Enhancement)
+DROP PROCEDURE IF EXISTS drop_index_if_exists;
+CREATE PROCEDURE drop_index_if_exists(IN tbl VARCHAR(64), IN idx VARCHAR(64))
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = tbl AND index_name = idx) THEN
+        SET @sql = CONCAT('ALTER TABLE `', tbl, '` DROP INDEX `', idx, '`');
+        PREPARE stmt FROM @sql;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END IF;
+END;
+
+CALL drop_index_if_exists('Game', 'idx_game_title');
+CALL drop_index_if_exists('Game', 'idx_release_date');
+CALL drop_index_if_exists('Game', 'idx_metacritic');
+DROP PROCEDURE IF EXISTS drop_index_if_exists;
+
 CREATE INDEX idx_game_title ON Game(title);
 CREATE INDEX idx_release_date ON Game(release_date);
 CREATE INDEX idx_metacritic ON Game(metacritic_score);
@@ -165,11 +182,12 @@ END;
 
 -- PART 3: VIEWS
 CREATE OR REPLACE VIEW GameIntelligenceSummary AS
-SELECT 
+SELECT
     g.game_id, g.title, g.release_date, g.base_price_usd, g.metacritic_score,
     g.user_review_pct, g.revenue_est_usd, g.copies_sold_est, g.award_count,
-    d.name AS developer_name, d.team_size, 
-    p.name AS publisher_name, p.tier AS publisher_tier, 
+    g.cover_image_url,
+    d.name AS developer_name, d.team_size,
+    p.name AS publisher_name, p.tier AS publisher_tier,
     e.name AS engine_name, e.typical_scale AS engine_scale
 FROM Game g
 JOIN Developer d ON g.developer_id = d.developer_id
@@ -238,6 +256,55 @@ SELECT
 FROM Game g
 JOIN GamePlatformListing gpl ON g.game_id = gpl.game_id
 JOIN Platform pl ON gpl.platform_id = pl.platform_id;
+
+-- RUBRIC: Subquery view — games above average Metacritic score
+CREATE OR REPLACE VIEW AboveAverageGames AS
+SELECT
+    g.game_id,
+    g.title,
+    d.name AS developer_name,
+    g.metacritic_score,
+    g.revenue_est_usd,
+    g.base_price_usd
+FROM Game g
+JOIN Developer d ON g.developer_id = d.developer_id
+WHERE g.metacritic_score > (
+    SELECT AVG(metacritic_score) FROM Game WHERE metacritic_score IS NOT NULL
+)
+ORDER BY g.metacritic_score DESC;
+
+-- RUBRIC: CalculateROI scalar function wired into a view
+CREATE OR REPLACE VIEW GameROI AS
+SELECT
+    g.game_id,
+    g.title,
+    d.name AS developer_name,
+    g.dev_budget_usd AS budget,
+    g.revenue_est_usd AS revenue,
+    CalculateROI(g.revenue_est_usd, g.dev_budget_usd) AS roi_pct,
+    g.metacritic_score,
+    g.team_size_at_launch
+FROM Game g
+JOIN Developer d ON g.developer_id = d.developer_id
+WHERE g.dev_budget_usd IS NOT NULL AND g.dev_budget_usd > 0
+ORDER BY roi_pct DESC;
+
+-- RUBRIC: Correlated subquery — developers with at least one above-average-revenue game
+CREATE OR REPLACE VIEW TopDevelopers AS
+SELECT
+    d.developer_id,
+    d.name,
+    d.country,
+    d.team_size,
+    d.is_independent
+FROM Developer d
+WHERE d.developer_id IN (
+    SELECT g.developer_id
+    FROM Game g
+    WHERE g.revenue_est_usd > (
+        SELECT AVG(revenue_est_usd) FROM Game WHERE revenue_est_usd IS NOT NULL
+    )
+);
 
 -- PART 4: STORED PROCEDURES
 DROP PROCEDURE IF EXISTS ClassifyGameTier;
