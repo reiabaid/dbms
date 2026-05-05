@@ -61,12 +61,12 @@
                     <table id="games-table">
                         <thead>
                             <tr>
-                                <th>TITLE</th>
+                                <th onclick="sortGames('title')" style="cursor: pointer;">TITLE ↕</th>
                                 <th>DEVELOPER</th>
                                 <th>PUBLISHER</th>
-                                <th>RELEASE</th>
-                                <th>CRITIC RATING</th>
-                                <th>REVENUE</th>
+                                <th onclick="sortGames('release_date')" style="cursor: pointer;">RELEASE ↕</th>
+                                <th onclick="sortGames('metacritic_score')" style="cursor: pointer;">CRITIC RATING ↕</th>
+                                <th onclick="sortGames('revenue_est_usd')" style="cursor: pointer;">REVENUE ↕</th>
                                 <th>ACTION</th>
                             </tr>
                         </thead>

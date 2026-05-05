@@ -42,28 +42,50 @@ async function loadDashboard() {
         document.getElementById('stat-top-engine').textContent = topEngine ? topEngine[0] : '--';
         
         // Render Table
-        const tbody = document.querySelector('#games-table tbody');
         window.currentGamesData = games;
-        tbody.innerHTML = games.map(g => `
-            <tr onclick="showGameDetails(${g.game_id})" style="cursor: pointer;">
-                <td>
-                    <div style="display: flex; align-items: center; gap: 1rem;">
-                        ${g.cover_image_url ? `<img src="${g.cover_image_url}" alt="${g.title}" style="width: 80px; height: 38px; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">` : '<div style="width: 80px; height: 38px; background: #222; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: #666; border: 1px solid rgba(255,255,255,0.1);">NO COVER</div>'}
-                        <strong>${g.title}</strong>
-                    </div>
-                </td>
-                <td>${g.developer_name}</td>
-                <td><span class="badge ${getTierClass(g.publisher_tier)}">${g.publisher_name}</span></td>
-                <td>${g.release_date ? new Date(g.release_date).getFullYear() : 'TBD'}</td>
-                <td>${g.metacritic_score || 'N/A'}</td>
-                <td>$${g.revenue_est_usd ? (g.revenue_est_usd / 1000000).toFixed(1) + 'M' : 'N/A'}</td>
-                <td><button class="btn-delete" onclick="event.stopPropagation(); deleteGame(${g.game_id}, '${g.title.replace(/'/g, "\\'")}')">DELETE</button></td>
-            </tr>
-        `).join('');
+        renderGamesTable(games);
     } catch (err) {
         console.error('Error loading games:', err);
     }
 }
+
+let sortDirection = {};
+function renderGamesTable(games) {
+    const tbody = document.querySelector('#games-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = games.map(g => `
+        <tr onclick="showGameDetails(${g.game_id})" style="cursor: pointer;">
+            <td>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    ${g.cover_image_url ? `<img src="${g.cover_image_url}" alt="${g.title}" style="width: 80px; height: 38px; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);">` : '<div style="width: 80px; height: 38px; background: #222; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: #666; border: 1px solid rgba(255,255,255,0.1);">NO COVER</div>'}
+                    <strong>${g.title}</strong>
+                </div>
+            </td>
+            <td>${g.developer_name}</td>
+            <td><span class="badge ${getTierClass(g.publisher_tier)}">${g.publisher_name}</span></td>
+            <td>${g.release_date ? new Date(g.release_date).getFullYear() : 'TBD'}</td>
+            <td>${g.metacritic_score || 'N/A'}</td>
+            <td>$${g.revenue_est_usd ? (g.revenue_est_usd / 1000000).toFixed(1) + 'M' : 'N/A'}</td>
+            <td><button class="btn-delete" onclick="event.stopPropagation(); deleteGame(${g.game_id}, '${g.title.replace(/'/g, "\\'")}')">DELETE</button></td>
+        </tr>
+    `).join('');
+}
+
+window.sortGames = function(column) {
+    if (!window.currentGamesData) return;
+    sortDirection[column] = !sortDirection[column];
+    const isAsc = sortDirection[column];
+    
+    window.currentGamesData.sort((a, b) => {
+        let valA = a[column];
+        let valB = b[column];
+        if (valA === null || valA === undefined) return 1;
+        if (valB === null || valB === undefined) return -1;
+        if (typeof valA === 'string') return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        return isAsc ? valA - valB : valB - valA;
+    });
+    renderGamesTable(window.currentGamesData);
+};
 
 // DELETE Operation (DML DELETE - Rubric Requirement)
 async function deleteGame(gameId, title) {
