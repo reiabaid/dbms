@@ -1,0 +1,3 @@
+Obsyria is a game industry intelligence system that stores and analyses data across games, developers, publishers, engines, platforms, and DLC in a normalized relational database.
+It provides analytical views, stored procedures, and scalar functions to classify game production tiers, calculate ROI, and benchmark developer performance.
+The system is deployed on Aiven Cloud with a Node.js/Express API layer and an interactive web frontend for real-time data exploration and registration.

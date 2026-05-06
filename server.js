@@ -147,5 +147,5 @@ app.get('/api/developer-benchmark/:name', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Game Intelligence Server running at http://localhost:${PORT}`);
+    console.log(`Game Intelligence Server running at http://localhost:${PORT}`);
 });
